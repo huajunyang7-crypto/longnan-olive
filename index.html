@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>陇南橄榄油 · 时空档案</title>
+    <!-- Leaflet 核心库 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- 移动标记动画插件 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', '微软雅黑', sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            background-color: #1a2a1f;
+        }
+        /* 地图容器：左侧70% */
+        #map {
+            width: 70%;
+            height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+        /* 右侧信息面板：30% */
+        #sidebar {
+            width: 30%;
+            height: 100vh;
+            background: linear-gradient(145deg, #fdf8ed 0%, #f5ecd9 100%);
+            padding: 25px 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 15px rgba(0,0,0,0.1);
+            border-left: 4px solid #b68b40;
+            color: #2c3e2c;
+        }
+        /* 品牌头部 */
+        .brand {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px dashed #b68b40;
+            padding-bottom: 15px;
+        }
+        .brand-icon {
+            font-size: 40px;
+            margin-right: 12px;
+        }
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #3a5e3a;
+            letter-spacing: 2px;
+        }
+        .brand h1 small {
+            font-size: 14px;
+            font-weight: 400;
+            color: #7f6b4b;
+            display: block;
+        }
+        /* 批次卡片 */
+        .batch-card {
+            background: white;
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 12px rgba(0,0,0,0.05);
+            border: 1px solid #e0d6c0;
+        }
+        .batch-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #5f4e2e;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .batch-title span {
+            background: #b68b40;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .info-label {
+            color: #6f6f6f;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #1e3a1e;
+        }
+        /* 认证徽章 */
+        .badge-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: #e8f0e8;
+            border-radius: 30px;
+            padding: 5px 12px;
+            font-size: 12px;
+            color: #2e5e2e;
+            border: 1px solid #a8c3a8;
+        }
+        /* 时间轴 */
+        .timeline {
+            margin: 25px 0;
+        }
+        .timeline-step {
+            display: flex;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .timeline-marker {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #d9c49b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-right: 15px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        .timeline-content {
+            flex: 1;
+        }
+        .timeline-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .timeline-desc {
+            font-size: 13px;
+            color: #5f5f5f;
+        }
+        /* 控制按钮 */
+        .control-btn {
+            background: #3a5e3a;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 14px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            margin: 20px 0 10px;
+            transition: 0.2s;
+            box-shadow: 0 5px 0 #1e321e;
+            border: 1px solid #5c8a5c;
+        }
+        .control-btn:hover {
+            background: #4f7a4f;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 #1e321e;
+        }
+        .control-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #1e321e;
+        }
+        .reset-btn {
+            background: #7f6b4b;
+            box-shadow: 0 5px 0 #5a4a32;
+        }
+        .footer-note {
+            text-align: center;
+            font-size: 12px;
+            color: #a19b8b;
+            margin-top: 20px;
+        }
+        /* 路径图例 */
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #map { width: 100%; height: 50vh; }
+            #sidebar { width: 100%; height: 50vh; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 左侧地图 -->
+    <div id="map"></div>
+
+    <!-- 右侧信息面板 -->
+    <div id="sidebar">
+        <div class="brand">
+            <div class="brand-icon">🫒</div>
+            <h1>陇南橄榄油<br><small>Longnan Olive · 时空档案</small></h1>
+        </div>
+
+        <div class="batch-card">
+            <div class="batch-title">
+                📦 当前批次 <span>LX-2024-0892</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">产地</span>
+                <span class="info-value">甘肃·陇南 武都区</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">采摘时间</span>
+                <span class="info-value">2024.10.15 06:30</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">压榨完成</span>
+                <span class="info-value">2024.10.15 14:20 (8h锁鲜)</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">国际认证</span>
+                <span class="info-value">IOC 特级初榨</span>
+            </div>
+            <div class="badge-group">
+                <span class="badge">🏅 102项国际大奖</span>
+                <span class="badge">🌍 国家地标产品</span>
+                <span class="badge">✅ 区块链存证</span>
+            </div>
+        </div>
+
+        <!-- 路线图例 -->
+        <div class="legend">
+            <div class="legend-item"><span class="color-dot" style="background:#3a8c3a;"></span> 公路</div>
+            <div class="legend-item"><span class="color-dot" style="background:#d97706;"></span> 铁路</div>
+            <div class="legend-item"><span class="color-dot" style="background:#2563eb;"></span> 海运/空运</div>
+        </div>
+
+        <!-- 运输时间轴 -->
+        <div class="timeline">
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#3a5e3a;">1</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">🌱 陇南·武都 祥宇种植园</div>
+                    <div class="timeline-desc">采摘、8小时内冷链至加工厂</div>
+                </div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#b68b40;">2</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">🏭 祥宇生态产业园</div>
+                    <div class="timeline-desc">物理冷榨、质检、灌装</div>
+                </div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#b68b40;">3</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">🚚 公路 → 西安国际港</div>
+                    <div class="timeline-desc">G75兰海高速，约680km</div>
+                </div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#d97706;">4</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">🚆 中欧班列</div>
+                    <div class="timeline-desc">西安→杜伊斯堡 (约12天)</div>
+                </div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#2563eb;">5</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">🏢 杜伊斯堡海外仓</div>
+                    <div class="timeline-desc">分拣、贴标、欧盟标准质检</div>
+                </div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-marker" style="background:#2563eb;">6</div>
+                <div class="timeline-content">
+                    <div class="timeline-title">📮 阿姆斯特丹消费者</div>
+                    <div class="timeline-desc">当日达 · 签收完成</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制区 -->
+        <button class="control-btn" id="playBtn">▶ 播放全程轨迹</button>
+        <button class="control-btn reset-btn" id="resetBtn">🗺️ 重置地图视角</button>
+        <div class="footer-note">
+            GIS溯源 · 地理标志+互联网+跨境电商<br>
+            东方橄榄 · 从陇南田间到全球餐桌
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 动画标记插件 (简易实现，用原生JS控制) -->
+    <script>
+        (function(){
+            // ==================================================
+            // 初始化地图 (视角初始对准陇南，适当缩放)
+            // ==================================================
+            const map = L.map('map').setView([33.4, 105.0], 6);
+            
+            // 底图：使用 CartoDB Voyager 风格（清晰、适合展示路径）
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            // ==================================================
+            // 定义关键节点坐标（示例坐标，请替换为你们从QGIS提取的真实坐标）
+            // ==================================================
+            const points = {
+                // 陇南产地
+                longnanFarm: [33.30, 104.95],      // 祥宇种植园（示例）
+                longnanFactory: [33.25, 105.05],    // 祥宇加工厂
+                // 物流枢纽
+                xianPort: [34.38, 109.00],          // 西安国际港务区
+                // 欧洲节点
+                duisburg: [51.43, 6.75],            // 德国杜伊斯堡
+                amsterdam: [52.37, 4.90]            // 阿姆斯特丹消费者
+            };
+
+            // ==================================================
+            // 添加标记（永久显示）
+            // ==================================================
+            // 自定义图标
+            const farmIcon = L.divIcon({ html: '🌳', className: 'emoji-icon', iconSize: [24,24] });
+            const factoryIcon = L.divIcon({ html: '🏭', className: 'emoji-icon', iconSize: [24,24] });
+            const portIcon = L.divIcon({ html: '🚢', className: 'emoji-icon', iconSize: [24,24] });
+            const warehouseIcon = L.divIcon({ html: '📦', className: 'emoji-icon', iconSize: [24,24] });
+            const consumerIcon = L.divIcon({ html: '🏠', className: 'emoji-icon', iconSize: [24,24] });
+
+            L.marker(points.longnanFarm, {icon: farmIcon}).bindPopup('<b>祥宇油橄榄种植基地</b><br>北纬33°黄金产区').addTo(map);
+            L.marker(points.longnanFactory, {icon: factoryIcon}).bindPopup('<b>祥宇生态产业园</b><br>8小时锁鲜压榨').addTo(map);
+            L.marker(points.xianPort, {icon: portIcon}).bindPopup('<b>西安国际港务区</b><br>中欧班列起点').addTo(map);
+            L.marker(points.duisburg, {icon: warehouseIcon}).bindPopup('<b>杜伊斯堡海外仓</b><br>欧洲分拨中心').addTo(map);
+            L.marker(points.amsterdam, {icon: consumerIcon}).bindPopup('<b>荷兰·阿姆斯特丹</b><br>终端消费者').addTo(map);
+
+            // ==================================================
+            // 绘制路径（三条线路，用不同颜色区分）
+            // ==================================================
+            
+            // 1. 公路：陇南工厂 → 西安港 (简化折线，可替换为你们真实路网提取的GeoJSON)
+            const roadLine = L.polyline([
+                points.longnanFactory,
+                [33.50, 106.20],   // 中途示意点（略阳）
+                [34.10, 108.40],   // 宝鸡附近
+                points.xianPort
+            ], {
+                color: '#3a8c3a',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: null,
+                className: 'road-path'
+            }).addTo(map);
+
+            // 2. 铁路：西安 → 杜伊斯堡 (中欧班列主线，示意大圆航线，实际应沿铁路线)
+            const railLine = L.polyline([
+                points.xianPort,
+                [43.8, 87.6],      // 乌鲁木齐
+                [48.0, 46.0],      // 哈萨克斯坦/俄罗斯
+                [52.0, 20.0],      // 波兰
+                points.duisburg
+            ], {
+                color: '#d97706',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 8',
+                className: 'rail-path'
+            }).addTo(map);
+
+            // 3. 欧洲公路：杜伊斯堡 → 阿姆斯特丹
+            const euroRoad = L.polyline([
+                points.duisburg,
+                [51.90, 5.80],     // 荷兰边境附近
+                points.amsterdam
+            ], {
+                color: '#2563eb',
+                weight: 4,
+                opacity: 0.7,
+                className: 'euro-road'
+            }).addTo(map);
+
+            // 添加一些沿途的城市标注（可选，增加丰富度）
+            L.circleMarker([43.8, 87.6], {radius:3, color:'#d97706', fill:true}).bindPopup('乌鲁木齐').addTo(map);
+            L.circleMarker([48.0, 46.0], {radius:3, color:'#d97706', fill:true}).bindPopup('阿斯塔纳').addTo(map);
+
+            // ==================================================
+            // 动画控制：移动的小车/火车图标
+            // ==================================================
+            let movingMarker = null;
+            let animationInterval = null;
+            let currentPathIndex = 0;
+            const paths = [
+                { coords: roadLine.getLatLngs(), color: '#3a8c3a', icon: '🚚', speed: 80 },      // 公路
+                { coords: railLine.getLatLngs(), color: '#d97706', icon: '🚆', speed: 200 },     // 铁路
+                { coords: euroRoad.getLatLngs(), color: '#2563eb', icon: '🚛', speed: 60 }       // 欧洲公路
+            ];
+
+            function createMovingIcon(iconText) {
+                return L.divIcon({
+                    html: `<div style="font-size:28px; transform: translate(-50%,-50%);">${iconText}</div>`,
+                    className: 'moving-marker',
+                    iconSize: [30, 30]
+                });
+            }
+
+            // 沿路径移动的函数
+            function startAnimation() {
+                // 清除之前的动画
+                if (animationInterval) clearInterval(animationInterval);
+                if (movingMarker) map.removeLayer(movingMarker);
+                
+                // 重置为第一条路径
+                currentPathIndex = 0;
+                moveAlongPath(paths[0]);
+            }
+
+            function moveAlongPath(pathObj) {
+                const latlngs = pathObj.coords;
+                const icon = pathObj.icon;
+                const speed = pathObj.speed;
+                
+                if (latlngs.length < 2) return;
+                
+                // 创建移动标记放在路径起点
+                movingMarker = L.marker(latlngs[0], {icon: createMovingIcon(icon)}).addTo(map);
+                
+                let step = 0;
+                const totalSteps = 200;  // 分段数，越多越平滑
+                let currentSegment = 0;
+                let segmentProgress = 0;
+                
+                // 为了简单，我们将路径拆分为多段线段
+                const segments = [];
+                for (let i = 0; i < latlngs.length - 1; i++) {
+                    segments.push({
+                        start: latlngs[i],
+                        end: latlngs[i+1]
+                    });
+                }
+                
+                animationInterval = setInterval(() => {
+                    if (currentSegment >= segments.length) {
+                        // 当前路径走完，切换下一条路径
+                        clearInterval(animationInterval);
+                        currentPathIndex++;
+                        if (currentPathIndex < paths.length) {
+                            // 下一条路径的起点应是上一条的终点
+                            const nextPath = paths[currentPathIndex];
+                            // 确保下一条路径起点与上一条终点接近，否则手动衔接
+                            moveAlongPath(nextPath);
+                        } else {
+                            // 全部走完，弹出提示
+                            setTimeout(() => alert('🎉 橄榄油已成功送达阿姆斯特丹消费者手中！'), 300);
+                        }
+                        return;
+                    }
+                    
+                    const seg = segments[currentSegment];
+                    segmentProgress += 0.01 * (speed / 50); // 速度调节
+                    
+                    if (segmentProgress >= 1.0) {
+                        segmentProgress = 0;
+                        currentSegment++;
+                        if (currentSegment >= segments.length) return;
+                    }
+                    
+                    // 线性插值计算当前位置
+                    const start = seg.start;
+                    const end = seg.end;
+                    const lat = start.lat + (end.lat - start.lat) * segmentProgress;
+                    const lng = start.lng + (end.lng - start.lng) * segmentProgress;
+                    
+                    movingMarker.setLatLng([lat, lng]);
+                    
+                    // 地图跟随（可选，为了效果更好）
+                    // map.panTo([lat, lng], {animate: true, duration: 0.5});
+                    
+                }, 50);
+            }
+
+            // 重置视角
+            function resetView() {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+                if (movingMarker) {
+                    map.removeLayer(movingMarker);
+                    movingMarker = null;
+                }
+                map.setView([33.4, 105.0], 6);
+                currentPathIndex = 0;
+            }
+
+            // 绑定按钮事件
+            document.getElementById('playBtn').addEventListener('click', startAnimation);
+            document.getElementById('resetBtn').addEventListener('click', resetView);
+
+            // 添加一些样式让emoji图标不显示背景框
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .emoji-icon {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    font-size: 28px;
+                    line-height: 1;
+                }
+                .moving-marker {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                }
+                .leaflet-popup-content {
+                    font-size: 14px;
+                    font-family: '微软雅黑', sans-serif;
+                }
+            `;
+            document.head.appendChild(style);
+
+        })();
+    </script>
+</body>
+</html>
